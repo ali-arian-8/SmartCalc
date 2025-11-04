@@ -15,7 +15,8 @@ class MyApp extends StatelessWidget{
       appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 58, 58, 58),
         title: Text('SmartCalc',style: TextStyle(color: Colors.white),),),
-      body: SafeArea(child: SmartCalc(),)
+      body: SafeArea(
+        child: SmartCalc(),)
     ),);
 
   }

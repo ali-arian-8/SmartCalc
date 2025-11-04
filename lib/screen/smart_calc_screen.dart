@@ -24,13 +24,16 @@ class _SmartCalcState extends State<SmartCalc>{
   @override
   Widget build(BuildContext context) {
    return
-     Center(child:
-   Column(children: [
-     TextFieldWidget(controller: controller,),
-     ResultWidget(result: result,),
-     ButtonsWidget(controller: controller,result: result,),
-   ],
-   ),
+
+   SizedBox.expand(
+     child: Column(
+       mainAxisAlignment: MainAxisAlignment.spaceAround,
+       children: [
+       TextFieldWidget(controller: controller,),
+       ResultWidget(result: result,),
+       ButtonsWidget(controller: controller,result: result,),
+     ],
+     ),
    );
   }
 }

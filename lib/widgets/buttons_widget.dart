@@ -1,5 +1,6 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:math_expressions/math_expressions.dart';
 
 class ButtonsWidget extends StatefulWidget {
   final TextEditingController controller;
@@ -12,161 +13,161 @@ class ButtonsWidget extends StatefulWidget {
   });
 
   @override
-  State<ButtonsWidget> createState() {
-    return _ButtonsWidgetState();
+  State<ButtonsWidget> createState() => _ButtonsWidgetState();
+}
+
+class _ButtonsWidgetState extends State<ButtonsWidget> {
+  List<String> buttons = [
+    'AC', '( )', '%', '÷',
+    '7', '8', '9', 'x',
+    '4', '5', '6', '-',
+    '1', '2', '3', '+',
+    '0', '.', '⌫', '='
+  ];
+
+  List<String> operators = ['+', '-', 'x', '÷'];
+
+  Color color(String value) {
+    if (value == 'AC') return const Color.fromARGB(255, 143, 1, 1);
+    if (operators.contains(value)) return const Color.fromARGB(255, 225, 160, 27);
+    if (value == '=') return const Color.fromARGB(255, 26, 131, 12);
+    if (value == '⌫') return const Color.fromARGB(255, 255, 143, 143);
+    return const Color.fromARGB(255, 115, 113, 113);
   }
 
-}
-class _ButtonsWidgetState extends State<ButtonsWidget>{
-
-  Widget build(BuildContext context) {
-    List<String> buttons = [
-      'AC', '( )', '%', '÷',
-      '7', '8', '9', 'x',
-      '4', '5', '6', '-',
-      '1', '2', '3', '+',
-      '0', '.', '⌫', '='
-    ];
-
-    // Determines button color based on its label
-    Color color(String value) {
-      if (value == 'AC') return const Color.fromARGB(255, 143, 1, 1);
-      if (value == '÷' || value == 'x' || value == '-' || value == '+') {
-        return const Color.fromARGB(255, 225, 160, 27);
-      }
-      if (value == '=') return const Color.fromARGB(255, 26, 131, 12);
-      if (value == '⌫') return const Color.fromARGB(255, 255, 143, 143);
-      return const Color.fromARGB(255, 115, 113, 113);
+  int countOpenParentheses(String text) {
+    int open = 0;
+    for (final c in text.split('')) {
+      if (c == '(') open++;
+      if (c == ')') open--;
     }
-    bool isOpenParenthesisNext = true;
-    void onButtonPressed(String value) {
-      List<String> operators = ['+', '-', 'x', '÷'];
+    return open;
+  }
 
+  void onButtonPressed(String value) {
+    HapticFeedback.lightImpact();
+    String text = widget.controller.text;
+    String lastChar = text.isEmpty ? '' : text[text.length - 1];
 
-      if (value == '( )') {
+    if (value == 'AC') {
+      widget.controller.clear();
+      widget.result.value = '0';
+      return;
+    }
 
-        // widget.controller.text += isOpenParenthesisNext ? '(' : ')';
-        // isOpenParenthesisNext = !isOpenParenthesisNext;
-        // return;
+    if (value == '⌫') {
+      if (text.isNotEmpty) {
+        widget.controller.text = text.substring(0, text.length - 1);
       }
+      return;
+    }
 
-      // Replace last operator if new one is also an operator
-      if (widget.controller.text.isNotEmpty &&
-          operators.contains(widget.controller.text[widget.controller.text.length - 1]) &&
-          operators.contains(value)) {
-        widget.controller.text = widget.controller.text.substring(0, widget.controller.text.length - 1);
-        widget.controller.text += value;
+    if (value == '( )') {
+      int unclosed = countOpenParentheses(text);
+      if (unclosed > 0 && RegExp(r'[0-9)%]').hasMatch(lastChar)) {
+        widget.controller.text += ')';
         return;
       }
+      if (lastChar.isEmpty || operators.contains(lastChar) || lastChar == '(') {
+        widget.controller.text += '(';
+        return;
+      }
+      if (RegExp(r'[0-9)]').hasMatch(lastChar)) {
+        widget.controller.text += 'x(';
+        return;
+      }
+      return;
+    }
 
-      // Clear input and result
-      if (value == 'AC') {
-        widget.controller.clear();
+    if (operators.contains(value)) {
+      if (text.isEmpty) {
+        if (value == '-' || value == '+') {
+          widget.controller.text += value;
+        }
+        return;
+      }
+      if (operators.contains(lastChar)) {
+        if ((lastChar == '+' || lastChar == '-') && (value == '+' || value == '-')) {
+          widget.controller.text = text.substring(0, text.length - 1) + value;
+        } else if (text.length > 1) {
+          widget.controller.text = text.substring(0, text.length - 1) + value;
+        }
+        return;
+      }
+    }
+
+    if (value == '.') {
+      final match = RegExp(r'(\d+\.\d*)$').stringMatch(text);
+      if (match != null) return;
+    }
+
+    if (value == '%') {
+      if (text.isEmpty) return;
+      if (operators.contains(lastChar) || lastChar == '(') return;
+      if (text.endsWith('%')) return;
+    }
+
+    if (value == '=') {
+      if (text.isEmpty) {
         widget.result.value = '0';
         return;
       }
-
-      // Backspace deletes last character
-      if (value == '⌫') {
-        final t = widget.controller.text;
-        if (t.isNotEmpty) {
-          widget.controller.text = t.substring(0, t.length - 1);
-        }
+      if (operators.contains(lastChar)) {
+        widget.result.value = 'Ends with operator';
+        return;
+      }
+      if (countOpenParentheses(text) != 0) {
+        widget.result.value = 'Unmatched parentheses';
+        return;
+      }
+      if (!RegExp(r'^[0-9+\-x÷().%]*$').hasMatch(text)) {
+        widget.result.value = 'Invalid characters';
+        return;
+      }
+      if (text.contains('÷0')) {
+        widget.result.value = 'Cannot divide by zero';
+        return;
+      }
+      if (text.contains('()') || text.contains('(+)') || text.contains('(-)') ||
+          text.contains('(x)') || text.contains('(÷)')) {
+        widget.result.value = 'Invalid parentheses';
         return;
       }
 
-      // Evaluate expression when '=' is pressed
-      if (value == '=') {
-        String expression = widget.controller.text;
+      // Convert percentages to decimal form
+      String exp = text
+          .replaceAllMapped(RegExp(r'(\d+(\.\d+)?)%'), (match) => '(${match.group(1)}/100)')
+          .replaceAll('x', '*')
+          .replaceAll('÷', '/');
 
-        // Prevent empty input
-        if (expression.trim().isEmpty) {
-          widget.result.value = '0';
-          return;
+      try {
+        Parser p = Parser();
+        Expression expParsed = p.parse(exp);
+        ContextModel cm = ContextModel();
+        double eval = expParsed.evaluate(EvaluationType.REAL, cm);
+        if (eval == eval.toInt()) {
+          widget.result.value = eval.toInt().toString();
+        } else {
+          widget.result.value = eval.toString();
         }
-
-        // Prevent ending with an operator
-        if (operators.contains(expression[expression.length - 1])) {
-          widget.result.value = 'Ends with operator';
-          return;
-        }
-
-        // Prevent starting with an invalid operator (allow minus)
-        if (operators.contains(expression[0]) && expression[0] != '-') {
-          widget.result.value = 'Starts with invalid operator';
-          return;
-        }
-
-        // Prevent multiple decimal points in a row
-        if (expression.contains('..')) {
-          widget.result.value = 'Invalid decimal';
-          return;
-        }
-
-        // Prevent division by zero
-        if (expression.contains('÷0')) {
-          widget.result.value = 'Cannot divide by zero';
-          return;
-        }
-
-        // Prevent invalid characters
-        final validChars = RegExp(r'^[0-9+\-x÷().%]*$');
-        if (!validChars.hasMatch(expression)) {
-          widget.result.value = 'Invalid characters';
-          return;
-        }
-
-        // Prevent unmatched parentheses
-        int open = '('.allMatches(expression).length;
-        int close = ')'.allMatches(expression).length;
-        if (open != close) {
-          widget.result.value = 'Unmatched parentheses';
-          return;
-        }
-
-        // Prevent multiple percentage symbols in a row
-        if (expression.contains('%%')) {
-          widget.result.value = 'Invalid percentage';
-          return;
-        }
-
-        // Prevent percentage symbol directly after an operator
-        if (expression.length >= 2 &&
-            operators.contains(expression[expression.length - 2]) &&
-            expression[expression.length - 1] == '%') {
-          widget.result.value = 'Invalid use of %';
-          return;
-        }
-
-        // Prevent starting with %, ., or )
-        if (expression.isNotEmpty &&
-            (expression[0] == '%' || expression[0] == '.' || expression[0] == ')')) {
-          widget.result.value = 'Cannot start with ' + expression[0];
-          return;
-        }
-
-        // Prevent empty or invalid parentheses like (), (+), etc.
-        if (expression.contains('()') ||
-            expression.contains('(+)') ||
-            expression.contains('(-)') ||
-            expression.contains('(x)') ||
-            expression.contains('(÷)')) {
-          widget.result.value = 'Invalid parentheses';
-          return;
-        }
-
-        // Replace symbols for actual calculation
-        expression = expression.replaceAll('x', '*').replaceAll('÷', '/');
-
-        // Placeholder for future evaluation logic
-        widget.result.value = '...';
-        return;
+      } catch (e) {
+        widget.result.value = 'Error';
       }
-
-      // Append normal input to the text field
-      widget.controller.text += value;
-      print(widget.controller.text);
+      return;
     }
+
+    widget.controller.text += value;
+  }
+
+  void onButtonLongPress(String value) {
+    if (value == '⌫') {
+      widget.controller.clear();
+      widget.result.value = '0';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       flex: 12,
       child: Container(
@@ -184,20 +185,24 @@ class _ButtonsWidgetState extends State<ButtonsWidget>{
           ),
           itemBuilder: (context, index) {
             final button = buttons[index];
-            return ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color(button),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            return Semantics(
+              label: 'Button $button',
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color(button),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-              onPressed: () => onButtonPressed(button),
-              child: Text(
-                button,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
+                onPressed: () => onButtonPressed(button),
+                onLongPress: () => onButtonLongPress(button),
+                child: Text(
+                  button,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             );
