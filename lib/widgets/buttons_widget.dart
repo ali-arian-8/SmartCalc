@@ -17,7 +17,7 @@ class ButtonsWidget extends StatefulWidget {
 }
 
 class _ButtonsWidgetState extends State<ButtonsWidget> {
-  List<String> buttons = [
+  final List<String> buttons = [
     'AC', '( )', '%', '÷',
     '7', '8', '9', 'x',
     '4', '5', '6', '-',
@@ -25,7 +25,7 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
     '0', '.', '⌫', '='
   ];
 
-  List<String> operators = ['+', '-', 'x', '÷'];
+  final List<String> operators = ['+', '-', 'x', '÷'];
 
   Color color(String value) {
     if (value == 'AC') return const Color.fromARGB(255, 143, 1, 1);
@@ -44,6 +44,28 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
     return open;
   }
 
+  void evaluateLive(String text) {
+    if (text.isEmpty || !text.contains(RegExp(r'[+\-x÷]'))) {
+      widget.result.value = '';
+      return;
+    }
+
+    String exp = text
+        .replaceAllMapped(RegExp(r'(\d+(\.\d+)?)%'), (match) => '(${match.group(1)}/100)')
+        .replaceAll('x', '*')
+        .replaceAll('÷', '/');
+
+    try {
+      Parser p = Parser();
+      Expression expParsed = p.parse(exp);
+      ContextModel cm = ContextModel();
+      double eval = expParsed.evaluate(EvaluationType.REAL, cm);
+      widget.result.value = eval == eval.toInt() ? eval.toInt().toString() : eval.toString();
+    } catch (_) {
+      widget.result.value = '';
+    }
+  }
+
   void onButtonPressed(String value) {
     HapticFeedback.lightImpact();
     String text = widget.controller.text;
@@ -51,13 +73,14 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
 
     if (value == 'AC') {
       widget.controller.clear();
-      widget.result.value = '0';
+      widget.result.value = '';
       return;
     }
 
     if (value == '⌫') {
       if (text.isNotEmpty) {
         widget.controller.text = text.substring(0, text.length - 1);
+        evaluateLive(widget.controller.text);
       }
       return;
     }
@@ -66,14 +89,17 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
       int unclosed = countOpenParentheses(text);
       if (unclosed > 0 && RegExp(r'[0-9)%]').hasMatch(lastChar)) {
         widget.controller.text += ')';
+        evaluateLive(widget.controller.text);
         return;
       }
       if (lastChar.isEmpty || operators.contains(lastChar) || lastChar == '(') {
         widget.controller.text += '(';
+        evaluateLive(widget.controller.text);
         return;
       }
       if (RegExp(r'[0-9)]').hasMatch(lastChar)) {
         widget.controller.text += 'x(';
+        evaluateLive(widget.controller.text);
         return;
       }
       return;
@@ -83,15 +109,13 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
       if (text.isEmpty) {
         if (value == '-' || value == '+') {
           widget.controller.text += value;
+          evaluateLive(widget.controller.text);
         }
         return;
       }
       if (operators.contains(lastChar)) {
-        if ((lastChar == '+' || lastChar == '-') && (value == '+' || value == '-')) {
-          widget.controller.text = text.substring(0, text.length - 1) + value;
-        } else if (text.length > 1) {
-          widget.controller.text = text.substring(0, text.length - 1) + value;
-        }
+        widget.controller.text = text.substring(0, text.length - 1) + value;
+        evaluateLive(widget.controller.text);
         return;
       }
     }
@@ -102,39 +126,12 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
     }
 
     if (value == '%') {
-      if (text.isEmpty) return;
-      if (operators.contains(lastChar) || lastChar == '(') return;
-      if (text.endsWith('%')) return;
+      if (text.isEmpty || operators.contains(lastChar) || text.endsWith('%')) return;
     }
 
     if (value == '=') {
-      if (text.isEmpty) {
-        widget.result.value = '0';
-        return;
-      }
-      if (operators.contains(lastChar)) {
-        widget.result.value = 'Ends with operator';
-        return;
-      }
-      if (countOpenParentheses(text) != 0) {
-        widget.result.value = 'Unmatched parentheses';
-        return;
-      }
-      if (!RegExp(r'^[0-9+\-x÷().%]*$').hasMatch(text)) {
-        widget.result.value = 'Invalid characters';
-        return;
-      }
-      if (text.contains('÷0')) {
-        widget.result.value = 'Cannot divide by zero';
-        return;
-      }
-      if (text.contains('()') || text.contains('(+)') || text.contains('(-)') ||
-          text.contains('(x)') || text.contains('(÷)')) {
-        widget.result.value = 'Invalid parentheses';
-        return;
-      }
+      if (text.isEmpty || operators.contains(lastChar) || countOpenParentheses(text) != 0) return;
 
-      // Convert percentages to decimal form
       String exp = text
           .replaceAllMapped(RegExp(r'(\d+(\.\d+)?)%'), (match) => '(${match.group(1)}/100)')
           .replaceAll('x', '*')
@@ -145,11 +142,9 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
         Expression expParsed = p.parse(exp);
         ContextModel cm = ContextModel();
         double eval = expParsed.evaluate(EvaluationType.REAL, cm);
-        if (eval == eval.toInt()) {
-          widget.result.value = eval.toInt().toString();
-        } else {
-          widget.result.value = eval.toString();
-        }
+        String result = eval == eval.toInt() ? eval.toInt().toString() : eval.toString();
+        widget.controller.text = result;
+        widget.result.value = '';
       } catch (e) {
         widget.result.value = 'Error';
       }
@@ -157,12 +152,13 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
     }
 
     widget.controller.text += value;
+    evaluateLive(widget.controller.text);
   }
 
   void onButtonLongPress(String value) {
     if (value == '⌫') {
       widget.controller.clear();
-      widget.result.value = '0';
+      widget.result.value = '';
     }
   }
 
@@ -171,9 +167,6 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
     return Expanded(
       flex: 12,
       child: Container(
-        height: double.infinity,
-        width: double.infinity,
-        alignment: Alignment.bottomCenter,
         padding: const EdgeInsets.all(10),
         color: const Color.fromARGB(255, 58, 58, 58),
         child: GridView.builder(

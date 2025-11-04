@@ -17,7 +17,8 @@ class MyApp extends StatelessWidget{
         title: Text('SmartCalc',style: TextStyle(color: Colors.white),),),
       body: SafeArea(
         child: SmartCalc(),)
-    ),);
+    ),
+    );
 
   }
 }

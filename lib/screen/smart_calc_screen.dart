@@ -12,7 +12,7 @@ class SmartCalc extends StatefulWidget{
 }
 class _SmartCalcState extends State<SmartCalc>{
   final TextEditingController controller = TextEditingController();
-  final ValueNotifier<String> result = ValueNotifier<String>('0'); // optional for result Widget.
+  final ValueNotifier<String> result = ValueNotifier<String>(''); // optional for result Widget.
 
   @override
   void dispose() {

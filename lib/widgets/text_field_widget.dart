@@ -12,7 +12,7 @@ class TextFieldWidget extends StatelessWidget{
      child:TextField(
        controller: controller,
        textAlign: TextAlign.right,
-       style: TextStyle(color: Colors.white,fontSize: 35),
+       style: TextStyle(color: Colors.white,fontSize: 45,fontWeight: FontWeight.bold),
        readOnly: true,
        showCursor: true,
        cursorColor: Colors.white,
