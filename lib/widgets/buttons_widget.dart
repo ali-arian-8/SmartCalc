@@ -18,18 +18,34 @@ class ButtonsWidget extends StatefulWidget {
 
 class _ButtonsWidgetState extends State<ButtonsWidget> {
   final List<String> buttons = [
-    'AC', '( )', '%', '÷',
-    '7', '8', '9', 'x',
-    '4', '5', '6', '-',
-    '1', '2', '3', '+',
-    '0', '.', '⌫', '='
+    'AC',
+    '( )',
+    '%',
+    '÷',
+    '7',
+    '8',
+    '9',
+    'x',
+    '4',
+    '5',
+    '6',
+    '-',
+    '1',
+    '2',
+    '3',
+    '+',
+    '0',
+    '.',
+    '⌫',
+    '=',
   ];
 
   final List<String> operators = ['+', '-', 'x', '÷'];
 
   Color color(String value) {
     if (value == 'AC') return const Color.fromARGB(255, 143, 1, 1);
-    if (operators.contains(value)) return const Color.fromARGB(255, 225, 160, 27);
+    if (operators.contains(value))
+      return const Color.fromARGB(255, 225, 160, 27);
     if (value == '=') return const Color.fromARGB(255, 26, 131, 12);
     if (value == '⌫') return const Color.fromARGB(255, 255, 143, 143);
     return const Color.fromARGB(255, 115, 113, 113);
@@ -51,7 +67,10 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
     }
 
     String exp = text
-        .replaceAllMapped(RegExp(r'(\d+(\.\d+)?)%'), (match) => '(${match.group(1)}/100)')
+        .replaceAllMapped(
+          RegExp(r'(\d+(\.\d+)?)%'),
+          (match) => '(${match.group(1)}/100)',
+        )
         .replaceAll('x', '*')
         .replaceAll('÷', '/');
 
@@ -60,7 +79,9 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
       Expression expParsed = p.parse(exp);
       ContextModel cm = ContextModel();
       double eval = expParsed.evaluate(EvaluationType.REAL, cm);
-      widget.result.value = eval == eval.toInt() ? eval.toInt().toString() : eval.toString();
+      widget.result.value = eval == eval.toInt()
+          ? eval.toInt().toString()
+          : eval.toString();
     } catch (_) {
       widget.result.value = '';
     }
@@ -126,14 +147,21 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
     }
 
     if (value == '%') {
-      if (text.isEmpty || operators.contains(lastChar) || text.endsWith('%')) return;
+      if (text.isEmpty || operators.contains(lastChar) || text.endsWith('%'))
+        return;
     }
 
     if (value == '=') {
-      if (text.isEmpty || operators.contains(lastChar) || countOpenParentheses(text) != 0) return;
+      if (text.isEmpty ||
+          operators.contains(lastChar) ||
+          countOpenParentheses(text) != 0)
+        return;
 
       String exp = text
-          .replaceAllMapped(RegExp(r'(\d+(\.\d+)?)%'), (match) => '(${match.group(1)}/100)')
+          .replaceAllMapped(
+            RegExp(r'(\d+(\.\d+)?)%'),
+            (match) => '(${match.group(1)}/100)',
+          )
           .replaceAll('x', '*')
           .replaceAll('÷', '/');
 
@@ -142,7 +170,9 @@ class _ButtonsWidgetState extends State<ButtonsWidget> {
         Expression expParsed = p.parse(exp);
         ContextModel cm = ContextModel();
         double eval = expParsed.evaluate(EvaluationType.REAL, cm);
-        String result = eval == eval.toInt() ? eval.toInt().toString() : eval.toString();
+        String result = eval == eval.toInt()
+            ? eval.toInt().toString()
+            : eval.toString();
         widget.controller.text = result;
         widget.result.value = '';
       } catch (e) {
